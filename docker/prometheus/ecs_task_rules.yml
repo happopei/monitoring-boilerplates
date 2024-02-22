@@ -1,0 +1,19 @@
+groups:
+- name: containers
+  rules:
+  - alert: HighContainerCPUUtil
+    expr: rate(ecs_cpu_seconds_total[5m])*100 > 90
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "At least one container of {{ $labels.container }} service has high CPU utilization"
+      description: "Container has > 90% cpu utilization"
+  - alert: HighContainerMemUtil
+    expr: ecs_memory_bytes/ecs_memory_limit_bytes*100 > 90
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "At least one container of {{ $labels.container }} service has high memory utilization"
+      description: "Container has > 90% memory utilization"        

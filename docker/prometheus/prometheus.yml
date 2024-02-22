@@ -1,0 +1,41 @@
+global:
+  scrape_interval: 1m 
+  evaluation_interval: 1m 
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+rule_files:
+  - "blackbox_rules.yml"
+  - "ecs_task_rules.yml"
+scrape_configs:
+  - job_name: "ecs_tasks"
+    http_sd_configs:
+    - url: http://svcdiscovery:8080?clusterArn=CHANGEME&region=CHANGEME&roleArn=CHANGEME&cluster=CHANGEME&env=CHANGEME
+      refresh_interval: 5m      
+
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: blackbox
+    metrics_path: /probe
+    scrape_interval: 5s
+    params:
+      module: [http_2xx]
+    static_configs:
+    - targets:
+      - prometheus:9090
+      - CHANGEME
+      labels:
+        env: dev
+    relabel_configs:
+    - source_labels: [__address__]
+      target_label: __param_target
+    - source_labels: [__param_target]
+      target_label: instance
+    - target_label: __address__
+      replacement: blackbox:9115

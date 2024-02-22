@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  blackbox:
+    image: prom/blackbox-exporter:latest
+    ports:
+    - 9115:9115
+    command:
+    - --config.file=/etc/blackbox/blackbox.yml
+    volumes:
+    - ./blackbox/blackbox.yml:/etc/blackbox/blackbox.yml
+  prometheus:
+    image: prom/prometheus:v2.45.3
+    container_name: prometheus
+    restart: always
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/blackbox_rules.yml:/etc/prometheus/blackbox_rules.yml
+      - ./prometheus/ecs_task_rules.yml:/etc/prometheus/ecs_task_rules.yml        
+      - ./data/prometheus:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    ports:
+      - 9090:9090
+    depends_on:
+    - blackbox        
+  grafana:
+    image: grafana/grafana
+    user: '472'
+    restart: always
+    environment:
+      GF_INSTALL_PLUGINS: 'grafana-clock-panel,grafana-simple-json-datasource'
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    env_file:
+      - ./grafana/config.monitoring
+    ports:
+      - 3000:3000
+    depends_on:
+      - prometheus
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    restart: always
+    ports:
+      - "9093:9093"
+    volumes:
+      - "./alertmanager:/config"
+      - ./data/alertmanager:/data
+    command: 
+      - "--config.file=/config/alertmanager.yml"
+      - "--log.level=debug"
+      - "--web.external-url=https://CHANGEME:3000/"
+
+  svcdiscovery:
+    build: svc_discovery/.
+    ports:
+      - "8080:8080"
+    restart: always

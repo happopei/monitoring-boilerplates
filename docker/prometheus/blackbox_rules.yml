@@ -1,0 +1,18 @@
+groups:
+- name: endpoints
+  rules:
+  - alert: HighRequestLatency
+    expr: probe_http_duration_seconds > 1
+    for: 1m
+    annotations:
+      summary: "High request latency on {{ $labels.instance }}"
+    labels:
+      severity: page        
+  - alert: SiteDownAlert
+    expr: probe_success == 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Site {{ $labels.instance }} is down"
+      description: "The HTTP probe for {{ $labels.instance }} failed."
